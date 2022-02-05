@@ -5,15 +5,18 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
-type Monomial struct {
-	varToDeg map[int]int
-}
+type Monomial map[int]int
 
-type Polynomial struct {
-	monoms []Monomial
+type Polynomial []Monomial
+
+type System struct {
+	n           int
+	polynomials []Polynomial
 }
 
 func lookahead(line *string, index int) byte {
@@ -46,7 +49,7 @@ func readNumber(line *string, index int) (number int, lastIndex int, err error) 
 // use empty map as a free member
 // index is a character before a monomial. Return index of the last read charachter
 func readMonomial(line *string, index int) (monom Monomial, lastIndex int, err error) {
-	monom.varToDeg = make(map[int]int)
+	monom = make(map[int]int)
 	nextChar := lookahead(line, index)
 	switch nextChar {
 	case '1':
@@ -69,7 +72,7 @@ func readMonomial(line *string, index int) (monom Monomial, lastIndex int, err e
 			index = newIndex
 			nextChar = lookahead(line, index)
 			if isEndOfMonomial(nextChar) || nextChar == '*' {
-				monom.varToDeg[varIndex] = 1
+				monom[varIndex] = 1
 			} else if nextChar == '^' {
 				index++
 				degree, newIndex, numErr := readNumber(line, index)
@@ -79,7 +82,7 @@ func readMonomial(line *string, index int) (monom Monomial, lastIndex int, err e
 				}
 				index = newIndex
 				if degree > 0 {
-					monom.varToDeg[varIndex] = degree
+					monom[varIndex] = degree
 				}
 			} else {
 				err = fmt.Errorf("'^' expected, got %c", nextChar)
@@ -107,7 +110,7 @@ func readMonomial(line *string, index int) (monom Monomial, lastIndex int, err e
 	return
 }
 
-func parse(line *string) (Polynomial, error) {
+func Parse(line *string) (Polynomial, error) {
 	var pol Polynomial
 	index := -1
 	nextChar := lookahead(line, index)
@@ -122,8 +125,8 @@ func parse(line *string) (Polynomial, error) {
 			if !isEndOfMonomial(nextChar) {
 				return Polynomial{}, fmt.Errorf("expected '+' or EOL, got '%c'", nextChar)
 			}
-			log.Println(monom)
-			pol.monoms = append(pol.monoms, monom)
+			//log.Println(monom)
+			pol = append(pol, monom)
 			if nextChar == 0 {
 				break
 			} else if nextChar == '+' {
@@ -137,6 +140,65 @@ func parse(line *string) (Polynomial, error) {
 		}
 	}
 	return pol, nil
+}
+
+func MultMono(m1, m2 *Monomial) (m3 Monomial) {
+	m3 = make(map[int]int)
+	for key, value := range *m1 {
+		m3[key] = value
+	}
+	for key, value := range *m2 {
+		m3[key] += value
+	}
+	return
+}
+
+func MultPoly(p1, p2 *Polynomial) (p3 Polynomial) {
+	p3 = make([]Monomial, 0)
+	for _, monom1 := range *p1 {
+		for _, monom2 := range *p2 {
+			p3 = append(p3, MultMono(&monom1, &monom2))
+		}
+	}
+	return Sanitize(&p3)
+}
+
+func Sanitize(src *Polynomial) (dst Polynomial) {
+	counts := make([]int, len(*src))
+	excess := -1
+	for i := 0; i < len(*src); i++ {
+		if counts[i] == excess {
+			continue
+		}
+		counts[i] = 1
+		for j := i + 1; j < len(*src); j++ {
+			if counts[j] == excess {
+				continue
+			}
+			if reflect.DeepEqual((*src)[i], (*src)[j]) {
+				counts[i]++
+				counts[j] = excess
+			}
+		}
+	}
+	log.Println(counts)
+	dst = make([]Monomial, 0)
+	for idx, count := range counts {
+		if count%2 == 1 {
+			dst = append(dst, (*src)[idx])
+		}
+	}
+	return
+}
+
+func Add(p1, p2 *Polynomial) (p3 Polynomial) {
+	p3 = append(p3, *p1...)
+	p3 = append(p3, *p2...)
+	return Sanitize(&p3)
+}
+
+func Sub(p1, p2 *Polynomial) (p3 Polynomial) {
+	return Add(p1, p2)
 }
 
 func main() {
@@ -153,13 +215,35 @@ func main() {
 	}
 	lines := strings.Split(strings.Replace(string(data), " ", "", -1), "\n")
 	log.Println(lines)
-	polSystem := make([]Polynomial, 0)
+	var system System
+	system.n, err = strconv.Atoi(lines[0])
+	if err != nil {
+		log.Printf("Failed to parse N: %s\n", err.Error())
+		os.Exit(2)
+	}
+	if system.n < 1 {
+		log.Printf("N must be positive!")
+		os.Exit(3)
+	}
+	lines = lines[1:]
+	system.polynomials = make([]Polynomial, 0)
 	for idx, line := range lines {
-		pol, err := parse(&line)
+		if len(line) == 0 {
+			continue
+		}
+		pol, err := Parse(&line)
 		if err != nil {
-			log.Printf("Failed to parse a polynomial at line %d. Message: %s)\n", idx+1, err.Error())
+			log.Printf("Failed to parse a polynomial at line %d. Message: %s\n", idx+1, err.Error())
 			os.Exit(1)
 		}
-		polSystem = append(polSystem, pol)
+		system.polynomials = append(system.polynomials, pol)
 	}
+	for _, pol := range system.polynomials {
+		log.Println(pol)
+	}
+	log.Println("Test add.")
+	p1, p2 := system.polynomials[0], system.polynomials[1]
+	log.Printf("Operands:\n%v\n%v\n", p1, p2)
+	log.Println(Add(&p1, &p2))
+	log.Println(MultPoly(&p1, &p2))
 }
