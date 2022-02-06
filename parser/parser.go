@@ -35,7 +35,7 @@ func readNumber(line *string, index int) (number, lastIndex int, err error) {
 // use empty map as a free member
 // index is a character before a monomial. Return index of the last read charachter
 func readMonomial(line *string, index int) (monom f2.Monomial, lastIndex int, err error) {
-	monom = make(map[int]int)
+	monom = make(f2.Monomial)
 	nextChar := lookahead(line, index)
 	switch nextChar {
 	case '1':

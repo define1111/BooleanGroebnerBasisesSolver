@@ -2,7 +2,6 @@ package f2
 
 import (
 	"errors"
-	"log"
 	"reflect"
 	"sort"
 )
@@ -17,7 +16,7 @@ type System struct {
 }
 
 func MultMono(m1, m2 *Monomial) (m3 Monomial) {
-	m3 = make(map[int]int)
+	m3 = make(Monomial)
 	for key, value := range *m1 {
 		m3[key] = value
 	}
@@ -28,7 +27,7 @@ func MultMono(m1, m2 *Monomial) (m3 Monomial) {
 }
 
 func MultPoly(p1, p2 *Polynomial) (p3 Polynomial) {
-	p3 = make([]Monomial, 0)
+	p3 = make(Polynomial, 0)
 	for _, monom1 := range *p1 {
 		for _, monom2 := range *p2 {
 			p3 = append(p3, MultMono(&monom1, &monom2))
@@ -55,8 +54,8 @@ func Simplify(src *Polynomial) (dst Polynomial) {
 			}
 		}
 	}
-	log.Println(counts)
-	dst = make([]Monomial, 0)
+	//log.Println(counts)
+	dst = make(Polynomial, 0)
 	for idx, count := range counts {
 		if count%2 == 1 {
 			dst = append(dst, (*src)[idx])
