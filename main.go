@@ -6,69 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 )
-
-func MultMono(m1, m2 *f2.Monomial) (m3 f2.Monomial) {
-	m3 = make(map[int]int)
-	for key, value := range *m1 {
-		m3[key] = value
-	}
-	for key, value := range *m2 {
-		m3[key] += value
-	}
-	return
-}
-
-func MultPoly(p1, p2 *f2.Polynomial) (p3 f2.Polynomial) {
-	p3 = make([]f2.Monomial, 0)
-	for _, monom1 := range *p1 {
-		for _, monom2 := range *p2 {
-			p3 = append(p3, MultMono(&monom1, &monom2))
-		}
-	}
-	return Sanitize(&p3)
-}
-
-func Sanitize(src *f2.Polynomial) (dst f2.Polynomial) {
-	counts := make([]int, len(*src))
-	excess := -1
-	for i := 0; i < len(*src); i++ {
-		if counts[i] == excess {
-			continue
-		}
-		counts[i] = 1
-		for j := i + 1; j < len(*src); j++ {
-			if counts[j] == excess {
-				continue
-			}
-			if reflect.DeepEqual((*src)[i], (*src)[j]) {
-				counts[i]++
-				counts[j] = excess
-			}
-		}
-	}
-	log.Println(counts)
-	dst = make([]f2.Monomial, 0)
-	for idx, count := range counts {
-		if count%2 == 1 {
-			dst = append(dst, (*src)[idx])
-		}
-	}
-	return
-}
-
-func Add(p1, p2 *f2.Polynomial) (p3 f2.Polynomial) {
-	p3 = append(p3, *p1...)
-	p3 = append(p3, *p2...)
-	return Sanitize(&p3)
-}
-
-func Sub(p1, p2 *f2.Polynomial) (p3 f2.Polynomial) {
-	return Add(p1, p2)
-}
 
 func main() {
 	log.SetFlags(0)
@@ -113,6 +53,9 @@ func main() {
 	log.Println("Test add.")
 	p1, p2 := system.Polynomials[0], system.Polynomials[1]
 	log.Printf("Operands:\n%v\n%v\n", p1, p2)
-	log.Println(Add(&p1, &p2))
-	log.Println(MultPoly(&p1, &p2))
+	log.Println(f2.AddPoly(&p1, &p2))
+	log.Println(f2.MultPoly(&p1, &p2))
+	log.Println(f2.CompareMono(&p1[0], &p2[0]))
+	log.Println("Top monomial: ", p1.GetTopMonomial())
+	log.Println("Without top: ", p1.DiscardTopMonomial())
 }
