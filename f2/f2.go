@@ -2,6 +2,8 @@ package f2
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"reflect"
 	"sort"
 )
@@ -13,6 +15,47 @@ type Polynomial []Monomial
 type System struct {
 	N           int
 	Polynomials []Polynomial
+}
+
+func (m Monomial) String() string {
+	if len(m) == 0 {
+		return "1"
+	}
+	s := ""
+	count := 0
+	for idx, deg := range m {
+		if count > 0 {
+			s += "*"
+		}
+		s += "x" + fmt.Sprint(idx)
+		if deg > 1 {
+			s += "^" + fmt.Sprint(deg)
+		}
+		count++
+	}
+	return s
+}
+
+func (p Polynomial) String() string {
+	s := ""
+	for idx, monom := range p {
+		if idx > 0 {
+			s += " + "
+		}
+		s += fmt.Sprint(monom)
+	}
+	if len(p) == 0 {
+		s = "0"
+	}
+	return "[" + s + "]"
+}
+
+func (sys System) String() string {
+	s := fmt.Sprintf("System (%d variables):\n", sys.N)
+	for idx, eq := range sys.Polynomials {
+		s += fmt.Sprintf("%d | %v = 0\n", idx+1, eq)
+	}
+	return s
 }
 
 func MultMono(m1, m2 *Monomial) (m3 Monomial) {
@@ -34,6 +77,14 @@ func MultPoly(p1, p2 *Polynomial) (p3 Polynomial) {
 		}
 	}
 	return Simplify(&p3)
+}
+
+func MultMonoPoly(m *Monomial, p *Polynomial) Polynomial {
+	pNew := make(Polynomial, 0)
+	for _, monom := range *p {
+		pNew = append(pNew, MultMono(m, &monom))
+	}
+	return Simplify(&pNew)
 }
 
 func Simplify(src *Polynomial) (dst Polynomial) {
@@ -125,6 +176,7 @@ func CompareMono(m1, m2 *Monomial) int {
 	return 0
 }
 
+// return nil if polynomial is 0
 func (p *Polynomial) GetTopMonomial() (topMonomial *Monomial) {
 	if len(*p) == 0 {
 		return nil
@@ -142,7 +194,7 @@ func (p *Polynomial) GetTopMonomial() (topMonomial *Monomial) {
 			panic(errors.New("unexpected result of a comparison"))
 		}
 	})
-	return &ps[0]
+	return &ps[len(ps)-1]
 }
 
 func (p *Polynomial) DiscardTopMonomial() (pNew *Polynomial) {
@@ -155,4 +207,54 @@ func (p *Polynomial) DiscardTopMonomial() (pNew *Polynomial) {
 	sum := AddPoly(p, &pMono)
 	pNew = &sum
 	return
+}
+
+// Return nil, if m1 is not divided by m2
+func (m1 *Monomial) Divide(m2 *Monomial) *Monomial {
+	m3 := make(Monomial)
+	for key2, val2 := range *m2 {
+		if val1, ok := (*m1)[key2]; ok {
+			if val2 > val1 {
+				return nil
+			}
+			if val2 != val1 {
+				m3[key2] = val1 - val2
+			}
+		} else {
+			return nil
+		}
+	}
+	for key1, val1 := range *m1 {
+		if _, ok := (*m2)[key1]; !ok {
+			m3[key1] = val1
+		}
+	}
+	return &m3
+}
+
+func (h *Polynomial) Reduce(f []Polynomial) *Polynomial {
+	log.Printf("h: %v\n", h)
+	log.Printf("f: %v\n", f)
+	hC := h.GetTopMonomial()
+	log.Printf("hC: %v\n", hC)
+	if hC == nil {
+		return nil
+	}
+	var h1 *Polynomial
+	h1 = nil
+	for _, fi := range f {
+		fiC := fi.GetTopMonomial()
+		log.Printf("fiC: %v\n", fiC)
+		Q := hC.Divide(fiC)
+		if Q != nil {
+			log.Printf("Q: %v\n", Q)
+			log.Printf("fi: %v\n", fi)
+			Qf := MultMonoPoly(Q, &fi)
+			log.Printf("Qfi: %v\n", Qf)
+			sum := AddPoly(h, &Qf)
+			h1 = &sum
+			break
+		}
+	}
+	return h1
 }

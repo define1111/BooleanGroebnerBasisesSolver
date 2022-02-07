@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 	lines := strings.Split(strings.Replace(string(data), " ", "", -1), "\n")
-	log.Println(lines)
+	//log.Println(lines)
 	var system f2.System
 	system.N, err = strconv.Atoi(lines[0])
 	if err != nil {
@@ -47,15 +47,18 @@ func main() {
 		}
 		system.Polynomials = append(system.Polynomials, pol)
 	}
-	for _, pol := range system.Polynomials {
-		log.Println(pol)
-	}
+	log.Println(system)
 	log.Println("Test add.")
 	p1, p2 := system.Polynomials[0], system.Polynomials[1]
 	log.Printf("Operands:\n%v\n%v\n", p1, p2)
-	log.Println(f2.AddPoly(&p1, &p2))
+	/*log.Println(f2.AddPoly(&p1, &p2))
 	log.Println(f2.MultPoly(&p1, &p2))
-	log.Println(f2.CompareMono(&p1[0], &p2[0]))
+	log.Println(f2.CompareMono(&p1[0], &p2[0]))*/
 	log.Println("Top monomial: ", p1.GetTopMonomial())
-	log.Println("Without top: ", p1.DiscardTopMonomial())
+	//log.Println("Without top: ", p1.DiscardTopMonomial())
+	red1 := p1.Reduce(system.Polynomials[1:3])
+	log.Println("Reduce 1: ", red1)
+	red2 := red1.Reduce(system.Polynomials[1:3])
+
+	log.Println("Reduce 2: ", red2)
 }
