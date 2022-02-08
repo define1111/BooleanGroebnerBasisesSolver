@@ -232,6 +232,27 @@ func (m1 *Monomial) Divide(m2 *Monomial) *Monomial {
 	return &m3
 }
 
+func (m1 *Monomial) Gcd(m2 *Monomial) Monomial {
+	gcd := make(Monomial)
+	for key1, val1 := range *m1 {
+		for key2, val2 := range *m2 {
+			if key1 == key2 {
+				if val1 < val2 {
+					gcd[key1] = val1
+				} else {
+					gcd[key1] = val2
+				}
+			}
+		}
+	}
+	return gcd
+}
+
+func (m *Monomial) IsConstant() bool {
+	return len(*m) == 0
+}
+
+// Return nil if polynomial is not reducable
 func (h *Polynomial) Reduce(f []Polynomial) *Polynomial {
 	log.Printf("h: %v\n", h)
 	log.Printf("f: %v\n", f)
@@ -257,4 +278,43 @@ func (h *Polynomial) Reduce(f []Polynomial) *Polynomial {
 		}
 	}
 	return h1
+}
+
+func (p1 *Polynomial) HasCommonChain(p2 *Polynomial) bool {
+	p1C := p1.GetTopMonomial()
+	p2C := p2.GetTopMonomial()
+	gcd := p1C.Gcd(p2C)
+	return !gcd.IsConstant()
+}
+
+func GetGroebnerBasis(ideal []Polynomial) (basis []Polynomial) {
+	basis = make([]Polynomial, len(ideal))
+	copy(basis, ideal)
+	for i := 0; i < len(ideal); i++ {
+		fi := ideal[i]
+		for j := i + 1; j < len(ideal); j++ {
+			fj := ideal[j]
+			fiC := fi.GetTopMonomial()
+			fjC := fj.GetTopMonomial()
+			gcd := fiC.Gcd(fjC)
+			// Has common chain
+			if gcd.IsConstant() {
+				continue
+			}
+			q1 := fiC.Divide(&gcd)
+			q2 := fjC.Divide(&gcd)
+			fiq2 := MultMonoPoly(q2, &fi)
+			fjq1 := MultMonoPoly(q1, &fj)
+			Fij := SubPoly(&fiq2, &fjq1)
+			f := Fij.Reduce(ideal)
+			for f != nil {
+				Fij = *f
+				f = f.Reduce(ideal)
+			}
+			if len(Fij) != 0 {
+				basis = append(basis, Fij)
+			}
+		}
+	}
+	return
 }

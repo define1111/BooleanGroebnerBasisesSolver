@@ -59,6 +59,7 @@ func main() {
 	red1 := p1.Reduce(system.Polynomials[1:3])
 	log.Println("Reduce 1: ", red1)
 	red2 := red1.Reduce(system.Polynomials[1:3])
-
 	log.Println("Reduce 2: ", red2)
+	basis := f2.GetGroebnerBasis(system.Polynomials[1:3])
+	log.Println("Basis: ", basis)
 }
