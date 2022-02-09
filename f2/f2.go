@@ -12,6 +12,8 @@ type Monomial map[int]int
 
 type Polynomial []Monomial
 
+type Basis []Polynomial
+
 type System struct {
 	N           int
 	Polynomials []Polynomial
@@ -287,8 +289,8 @@ func (p1 *Polynomial) HasCommonChain(p2 *Polynomial) bool {
 	return !gcd.IsConstant()
 }
 
-func GetGroebnerBasis(ideal []Polynomial) (basis []Polynomial) {
-	basis = make([]Polynomial, len(ideal))
+func GetGroebnerBasis(ideal []Polynomial) (basis Basis) {
+	basis = make(Basis, len(ideal))
 	copy(basis, ideal)
 	for i := 0; i < len(ideal); i++ {
 		fi := ideal[i]
@@ -317,4 +319,57 @@ func GetGroebnerBasis(ideal []Polynomial) (basis []Polynomial) {
 		}
 	}
 	return
+}
+
+func (b *Basis) Minimize() {
+	deleteIdx := make([]bool, len(*b))
+	for i := 0; i < len(*b); i++ {
+		if deleteIdx[i] {
+			continue
+		}
+		fi := (*b)[i]
+		fiC := fi.GetTopMonomial()
+		for j := i + 1; j < len(*b); j++ {
+			if deleteIdx[j] {
+				continue
+			}
+			fj := (*b)[j]
+			fjC := fj.GetTopMonomial()
+			if fiC.Divide(fjC) != nil {
+				deleteIdx[i] = true
+			} else if fjC.Divide(fiC) != nil {
+				deleteIdx[j] = true
+			}
+		}
+	}
+	for j := 0; j < len(*b); j++ {
+		if deleteIdx[j] {
+			continue
+		}
+		fj := (*b)[j]
+		fjC := fj.GetTopMonomial()
+		for i := j + 1; i < len(*b); i++ {
+			if deleteIdx[i] {
+				continue
+			}
+			fi := (*b)[i]
+			for _, q := range fi {
+				div := q.Divide(fjC)
+				if div != nil {
+					pq := make(Polynomial, 1)
+					pq[0] = q
+					qRed := pq.Reduce((*b)[j : j+1])
+					fi = AddPoly(&fi, &pq)
+					fi = AddPoly(&fi, qRed)
+				}
+			}
+		}
+	}
+	newB := make(Basis, 0)
+	for idx, poly := range *b {
+		if !deleteIdx[idx] {
+			newB = append(newB, poly)
+		}
+	}
+	b = &newB
 }

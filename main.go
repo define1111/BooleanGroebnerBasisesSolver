@@ -62,4 +62,6 @@ func main() {
 	log.Println("Reduce 2: ", red2)
 	basis := f2.GetGroebnerBasis(system.Polynomials[1:3])
 	log.Println("Basis: ", basis)
+	basis.Minimize()
+	log.Println("Minimized: ", basis)
 }
