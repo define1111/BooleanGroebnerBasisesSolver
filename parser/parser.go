@@ -34,7 +34,7 @@ func readNumber(line *string, index int) (number, lastIndex int, err error) {
 
 // use empty map as a free member
 // index is a character before a monomial. Return index of the last read charachter
-func readMonomial(line *string, index int) (monom f2.Monomial, lastIndex int, err error) {
+func ReadMonomial(line *string, index int) (monom f2.Monomial, lastIndex int, err error) {
 	monom = make(f2.Monomial)
 	nextChar := lookahead(line, index)
 	switch nextChar {
@@ -102,7 +102,7 @@ func Parse(line *string) (f2.Polynomial, error) {
 	nextChar := lookahead(line, index)
 	for {
 		if nextChar == '1' || nextChar == 'x' {
-			monom, newIndex, err := readMonomial(line, index)
+			monom, newIndex, err := ReadMonomial(line, index)
 			if err != nil {
 				return f2.Polynomial{}, err
 			}

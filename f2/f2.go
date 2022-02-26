@@ -25,7 +25,15 @@ func (m Monomial) String() string {
 	}
 	s := ""
 	count := 0
-	for idx, deg := range m {
+	keys := make([]int, len(m))
+	i := 0
+	for key := range m {
+		keys[i] = key
+		i++
+	}
+	sort.Ints(keys)
+	for _, idx := range keys {
+		deg := m[idx]
 		if count > 0 {
 			s += "*"
 		}
@@ -110,7 +118,7 @@ func Simplify(src *Polynomial) (dst Polynomial) {
 	//log.Println(counts)
 	dst = make(Polynomial, 0)
 	for idx, count := range counts {
-		if count%2 == 1 {
+		if count > 0 && count%2 == 1 {
 			dst = append(dst, (*src)[idx])
 		}
 	}
@@ -153,24 +161,29 @@ func CompareMono(m1, m2 *Monomial) int {
 	}
 	sort.Ints(keys1)
 	sort.Ints(keys2)
-	if keys1[0] < keys2[0] {
-		// m2 is less. Ex: x2 > x5
-		return 1
-	} else if keys1[0] > keys2[0] {
-		// m1 is less
-		return -1
-	}
 	idx = 0
-	for ; idx < len(keys1) && idx < len(keys2) && keys1[idx] == keys2[idx]; idx++ {
-		deg1, deg2 := (*m1)[keys1[idx]], (*m2)[keys2[idx]]
-		if deg1 < deg2 {
-			return -1
-		} else if deg1 > deg2 {
-			return 1
+	for ; idx < len(keys1) && idx < len(keys2); idx++ {
+		if keys1[idx] == keys2[idx] {
+			deg1, deg2 := (*m1)[keys1[idx]], (*m2)[keys2[idx]]
+			if deg1 < deg2 {
+				return -1
+			} else if deg1 > deg2 {
+				return 1
+			}
+		} else {
+			if keys1[idx] < keys2[idx] {
+				// m2 is less. Ex: x2 > x5
+				return 1
+			} else if keys1[idx] > keys2[idx] {
+				// m1 is less
+				return -1
+			} else {
+				panic("Unreachable")
+			}
 		}
 	}
 	if len(keys1) != len(keys2) {
-		if idx+1 == len(keys1) {
+		if idx == len(keys1) {
 			return -1
 		}
 		return 1
@@ -183,10 +196,14 @@ func (p *Polynomial) GetTopMonomial() (topMonomial *Monomial) {
 	if len(*p) == 0 {
 		return nil
 	}
+	//log.Println(p)
 	ps := Simplify(p)
+	//log.Println(ps)
 	sort.SliceStable(ps, func(i, j int) bool {
 		switch CompareMono(&ps[i], &ps[j]) {
 		case 0:
+			log.Println(i, ps[i])
+			log.Println(j, ps[j])
 			panic(errors.New("monomials must not be equal"))
 		case 1:
 			return false
@@ -298,7 +315,9 @@ func GetGroebnerBasis(ideal []Polynomial) (basis Basis) {
 			fj := ideal[j]
 			fiC := fi.GetTopMonomial()
 			fjC := fj.GetTopMonomial()
+			log.Printf("fiC: %v, fjC: %v\n", fiC, fjC)
 			gcd := fiC.Gcd(fjC)
+			log.Printf("Gcd: %v\n", gcd)
 			// Has common chain
 			if gcd.IsConstant() {
 				continue
@@ -308,10 +327,13 @@ func GetGroebnerBasis(ideal []Polynomial) (basis Basis) {
 			fiq2 := MultMonoPoly(q2, &fi)
 			fjq1 := MultMonoPoly(q1, &fj)
 			Fij := SubPoly(&fiq2, &fjq1)
+			log.Println("Reduce this:", Fij)
 			f := Fij.Reduce(ideal)
-			for f != nil {
+			log.Println("After reduce:", f)
+			for count := 0; f != nil; /*&& count < 5*/ count++ {
 				Fij = *f
 				f = f.Reduce(ideal)
+				log.Println("After reduce:", f)
 			}
 			if len(Fij) != 0 {
 				basis = append(basis, Fij)
@@ -371,5 +393,6 @@ func (b *Basis) Minimize() {
 			newB = append(newB, poly)
 		}
 	}
-	b = &newB
+	//log.Println(newB)
+	(*b) = newB[:]
 }
