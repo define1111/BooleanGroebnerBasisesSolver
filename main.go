@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -71,4 +72,6 @@ func main() {
 	newSystem.Polynomials = basis
 	newSolutions := newSystem.Solve()
 	log.Println("New solutions: ", newSolutions)
+	areEqual := reflect.DeepEqual(solutions, newSolutions)
+	log.Println("Are equal: ", areEqual)
 }
