@@ -51,7 +51,7 @@ func ReadMonomial(line *string, index int) (monom f2.Monomial, lastIndex int, er
 			//fmt.Println(nextChar, index)
 			index++
 			varIndex, newIndex, numErr := readNumber(line, index)
-			if numErr != nil {
+			if numErr != nil || varIndex < 1 {
 				err = fmt.Errorf("invalid index of a variable")
 				return
 			}

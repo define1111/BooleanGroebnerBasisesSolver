@@ -64,4 +64,11 @@ func main() {
 	log.Println("Basis: ", basis)
 	basis.Minimize()
 	log.Println("Minimized: ", basis)
+	solutions := system.Solve()
+	log.Println("Solutions: ", solutions)
+	var newSystem f2.System
+	newSystem.N = system.N
+	newSystem.Polynomials = basis
+	newSolutions := newSystem.Solve()
+	log.Println("New solutions: ", newSolutions)
 }

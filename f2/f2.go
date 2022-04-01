@@ -396,3 +396,35 @@ func (b *Basis) Minimize() {
 	//log.Println(newB)
 	(*b) = newB[:]
 }
+
+func (s *System) Solve() [][]int {
+	limit := 1 << s.N
+	solutions := make([][]int, 0)
+	for val := 0; val < limit; val++ {
+		vector := make([]int, s.N)
+		tmp := val
+		for i := s.N - 1; i >= 0; i-- {
+			vector[i] = tmp % 2
+			tmp /= 2
+		}
+		allTrue := true
+		for _, poly := range s.Polynomials {
+			sum := 0
+			for _, mono := range poly {
+				mult := 1
+				for index := range mono {
+					mult *= vector[index-1]
+				}
+				sum += mult
+			}
+			if sum%2 != 0 {
+				allTrue = false
+				break
+			}
+		}
+		if allTrue {
+			solutions = append(solutions, vector)
+		}
+	}
+	return solutions
+}
