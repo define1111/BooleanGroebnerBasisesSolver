@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"groebner/f2"
 	"groebner/parser"
 	"io/ioutil"
@@ -74,4 +75,10 @@ func main() {
 	log.Println("New solutions: ", newSolutions)
 	areEqual := reflect.DeepEqual(solutions, newSolutions)
 	log.Println("Are equal: ", areEqual)
+	fmt.Println("N =", system.N)
+	fmt.Println("Original system:")
+	fmt.Printf("%v", system)
+	fmt.Println("New system:")
+	fmt.Printf("%v", newSystem)
+	fmt.Printf("Equal: %v\n", areEqual)
 }

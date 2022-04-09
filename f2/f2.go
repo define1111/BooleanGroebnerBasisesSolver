@@ -61,7 +61,8 @@ func (p Polynomial) String() string {
 }
 
 func (sys System) String() string {
-	s := fmt.Sprintf("System (%d variables):\n", sys.N)
+	//s := fmt.Sprintf("System (%d variables):\n", sys.N)
+	s := ""
 	for idx, eq := range sys.Polynomials {
 		s += fmt.Sprintf("%d | %v = 0\n", idx+1, eq)
 	}
@@ -292,7 +293,10 @@ func (h *Polynomial) Reduce(f []Polynomial) *Polynomial {
 			Qf := MultMonoPoly(Q, &fi)
 			log.Printf("Qfi: %v\n", Qf)
 			sum := AddPoly(h, &Qf)
+			//Qfim := MultMonoPoly(Q, fi.DiscardTopMonomial())
+			//sumOther := AddPoly(&Qfim, h.DiscardTopMonomial())
 			h1 = &sum
+			//h1 = &sumOther
 			break
 		}
 	}
@@ -309,10 +313,10 @@ func (p1 *Polynomial) HasCommonChain(p2 *Polynomial) bool {
 func GetGroebnerBasis(ideal []Polynomial) (basis Basis) {
 	basis = make(Basis, len(ideal))
 	copy(basis, ideal)
-	for i := 0; i < len(ideal); i++ {
-		fi := ideal[i]
-		for j := i + 1; j < len(ideal); j++ {
-			fj := ideal[j]
+	for i := 1; i < len(basis); i++ {
+		fi := basis[i]
+		for j := 0; j < i; j++ {
+			fj := basis[j]
 			fiC := fi.GetTopMonomial()
 			fjC := fj.GetTopMonomial()
 			log.Printf("fiC: %v, fjC: %v\n", fiC, fjC)
@@ -324,15 +328,19 @@ func GetGroebnerBasis(ideal []Polynomial) (basis Basis) {
 			}
 			q1 := fiC.Divide(&gcd)
 			q2 := fjC.Divide(&gcd)
+			log.Println("q1:", q1)
+			log.Println("q2:", q2)
 			fiq2 := MultMonoPoly(q2, &fi)
 			fjq1 := MultMonoPoly(q1, &fj)
+			log.Println("fiq2:", fiq2)
+			log.Println("fjq1:", fjq1)
 			Fij := SubPoly(&fiq2, &fjq1)
 			log.Println("Reduce this:", Fij)
-			f := Fij.Reduce(ideal)
+			f := Fij.Reduce(basis)
 			log.Println("After reduce:", f)
 			for count := 0; f != nil; /*&& count < 5*/ count++ {
 				Fij = *f
-				f = f.Reduce(ideal)
+				f = f.Reduce(basis)
 				log.Println("After reduce:", f)
 			}
 			if len(Fij) != 0 {
@@ -345,6 +353,7 @@ func GetGroebnerBasis(ideal []Polynomial) (basis Basis) {
 
 func (b *Basis) Minimize() {
 	deleteIdx := make([]bool, len(*b))
+	log.Println("Delete idx, before:", deleteIdx)
 	for i := 0; i < len(*b); i++ {
 		if deleteIdx[i] {
 			continue
@@ -357,13 +366,19 @@ func (b *Basis) Minimize() {
 			}
 			fj := (*b)[j]
 			fjC := fj.GetTopMonomial()
+			log.Printf("fi: %v, fj: %v\n", fi, fj)
+			log.Printf("fiC: %v, fjC: %v\n", fiC, fjC)
 			if fiC.Divide(fjC) != nil {
 				deleteIdx[i] = true
+				log.Printf("%v divide %v != nil, delete %v", i, j, i)
+				break
 			} else if fjC.Divide(fiC) != nil {
 				deleteIdx[j] = true
+				log.Printf("%v divide %v != nil, delete %v", j, i, j)
 			}
 		}
 	}
+	log.Println("Delete idx, step 1:", deleteIdx)
 	for j := 0; j < len(*b); j++ {
 		if deleteIdx[j] {
 			continue
