@@ -36,13 +36,38 @@ func main() {
 		log.Printf("N must be positive!")
 		os.Exit(3)
 	}
-	lines = lines[1:]
+	// parse order
+	if len(lines[1]) > 1 && lines[1][0] == '#' {
+		order, err := parser.ParseOrder(&lines[1], system.N)
+		if err != nil {
+			log.Printf("Failed to parse an order at line 2. Message: %s\n", err.Error())
+			os.Exit(1)
+		}
+		orderErr := f2.SetOrder(order, system.N)
+		if orderErr != nil {
+			log.Printf("Failed to set an order. Message: %s\n", orderErr.Error())
+			os.Exit(1)
+		}
+		lines = lines[2:]
+	} else {
+		order := make([]int, system.N)
+		for i := 1; i <= system.N; i++ {
+			order[i-1] = i
+		}
+		orderErr := f2.SetOrder(order, system.N)
+		if orderErr != nil {
+			log.Printf("Failed to set an order. Message: %s\n", orderErr.Error())
+			os.Exit(1)
+		}
+		lines = lines[1:]
+	}
+	log.Println("Order: ", f2.Order)
 	system.Polynomials = make([]f2.Polynomial, 0)
 	for idx, line := range lines {
 		if len(line) == 0 {
 			continue
 		}
-		pol, err := parser.Parse(&line)
+		pol, err := parser.ParsePolynomial(&line)
 		if err != nil {
 			log.Printf("Failed to parse a f2.Polynomial at line %d. Message: %s\n", idx+1, err.Error())
 			os.Exit(1)

@@ -8,6 +8,8 @@ import (
 	"sort"
 )
 
+var Order []int
+
 type Monomial map[int]int
 
 type Polynomial []Monomial
@@ -17,6 +19,29 @@ type Basis []Polynomial
 type System struct {
 	N           int
 	Polynomials []Polynomial
+}
+
+func SetOrder(orderlist []int, n int) (err error) {
+	if n < 1 {
+		err = fmt.Errorf("invalid dimension of the system: %d", n)
+		return
+	}
+	found := make([]bool, n)
+	for _, val := range orderlist {
+		if found[val-1] {
+			err = fmt.Errorf("variable x%d has already been defined", val)
+			return
+		}
+		found[val-1] = true
+	}
+	for idx, val := range found {
+		if !val {
+			err = fmt.Errorf("failed to find an order for a variable with index %d", idx+1)
+			return
+		}
+	}
+	Order = orderlist
+	return
 }
 
 func (m Monomial) String() string {
@@ -136,6 +161,44 @@ func SubPoly(p1, p2 *Polynomial) (p3 Polynomial) {
 	return AddPoly(p1, p2)
 }
 
+type ByOrder []int
+
+func (a ByOrder) Len() int { return len(a) }
+func (a ByOrder) Less(i, j int) bool {
+	iPos, jPos := -1, -1
+	for idx, elem := range Order {
+		if a[i] == elem {
+			iPos = idx
+		}
+		if a[j] == elem {
+			jPos = idx
+		}
+	}
+	if iPos == -1 || jPos == -1 {
+		panic("invalid sorting")
+	}
+	return iPos < jPos
+}
+func (a ByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+// Return a distance between xi and xj where i is idx1 and j is idx2 using
+// an order.
+func CompareByOrder(idx1, idx2 int) int {
+	pos1, pos2 := -1, -1
+	for idx, val := range Order {
+		if val == idx1 {
+			pos1 = idx
+		}
+		if val == idx2 {
+			pos2 = idx
+		}
+	}
+	if pos1 == -1 || pos2 == -1 {
+		panic("invalid comparison")
+	}
+	return pos1 - pos2
+}
+
 func CompareMono(m1, m2 *Monomial) int {
 	if len(*m1) == 0 && len(*m2) == 0 {
 		return 0
@@ -160,8 +223,10 @@ func CompareMono(m1, m2 *Monomial) int {
 		keys2[idx] = key
 		idx++
 	}
-	sort.Ints(keys1)
-	sort.Ints(keys2)
+	sort.Sort(ByOrder(keys1))
+	sort.Sort(ByOrder(keys2))
+	log.Println("Order 1: ", keys1)
+	log.Println("Order 2: ", keys2)
 	idx = 0
 	for ; idx < len(keys1) && idx < len(keys2); idx++ {
 		if keys1[idx] == keys2[idx] {
@@ -172,10 +237,11 @@ func CompareMono(m1, m2 *Monomial) int {
 				return 1
 			}
 		} else {
-			if keys1[idx] < keys2[idx] {
+			cmp := CompareByOrder(keys1[idx], keys2[idx])
+			if cmp < 0 {
 				// m2 is less. Ex: x2 > x5
 				return 1
-			} else if keys1[idx] > keys2[idx] {
+			} else if cmp > 0 {
 				// m1 is less
 				return -1
 			} else {

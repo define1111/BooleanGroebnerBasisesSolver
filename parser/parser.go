@@ -96,7 +96,45 @@ func ReadMonomial(line *string, index int) (monom f2.Monomial, lastIndex int, er
 	return
 }
 
-func Parse(line *string) (f2.Polynomial, error) {
+func ParseOrder(line *string, n int) (monom []int, err error) {
+	if (*line)[0] != '#' {
+		err = fmt.Errorf("'#' expected, got '%c'", (*line)[0])
+		return
+	}
+	index := 0
+	nextChar := lookahead(line, index)
+	monom = make([]int, 0)
+	for {
+		//log.Printf("char: %c\n", nextChar)
+		if nextChar == 'x' {
+			index++
+			varIndex, newIndex, numErr := readNumber(line, index)
+			if numErr != nil || varIndex < 1 || varIndex > n {
+				err = fmt.Errorf("invalid index of a variable: %d (min = 1, max = %d)", varIndex, n)
+				return
+			}
+			index = newIndex
+			monom = append(monom, varIndex)
+			nextChar = lookahead(line, index)
+			//log.Println(nextChar)
+			switch nextChar {
+			case '>':
+				index++
+				nextChar = lookahead(line, index)
+			case 0:
+				return
+			default:
+				err = fmt.Errorf("expected '>' or EOL, got '%c'", nextChar)
+				return
+			}
+		} else {
+			err = fmt.Errorf("'x' expected, got '%c'", nextChar)
+			return
+		}
+	}
+}
+
+func ParsePolynomial(line *string) (f2.Polynomial, error) {
 	var pol f2.Polynomial
 	index := -1
 	nextChar := lookahead(line, index)
