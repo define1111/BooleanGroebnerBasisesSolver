@@ -225,8 +225,8 @@ func CompareMono(m1, m2 *Monomial) int {
 	}
 	sort.Sort(ByOrder(keys1))
 	sort.Sort(ByOrder(keys2))
-	log.Println("Order 1: ", keys1)
-	log.Println("Order 2: ", keys2)
+	//log.Println("Order 1: ", keys1)
+	//log.Println("Order 2: ", keys2)
 	idx = 0
 	for ; idx < len(keys1) && idx < len(keys2); idx++ {
 		if keys1[idx] == keys2[idx] {
@@ -417,7 +417,7 @@ func GetGroebnerBasis(ideal []Polynomial) (basis Basis) {
 	return
 }
 
-func (b *Basis) Minimize() {
+func (b *Basis) minimizeAndReduce() {
 	deleteIdx := make([]bool, len(*b))
 	log.Println("Delete idx, before:", deleteIdx)
 	for i := 0; i < len(*b); i++ {
@@ -444,6 +444,12 @@ func (b *Basis) Minimize() {
 			}
 		}
 	}
+	log.Println("After minimization: ")
+	for idx, poly := range *b {
+		if !deleteIdx[idx] {
+			log.Println(idx, " ", poly)
+		}
+	}
 	log.Println("Delete idx, step 1:", deleteIdx)
 	for j := 0; j < len(*b); j++ {
 		if deleteIdx[j] {
@@ -451,19 +457,35 @@ func (b *Basis) Minimize() {
 		}
 		fj := (*b)[j]
 		fjC := fj.GetTopMonomial()
-		for i := j + 1; i < len(*b); i++ {
-			if deleteIdx[i] {
+		log.Println("Top:", fjC)
+		for i := 0; i < len(*b); i++ {
+			log.Println("j, i: ", j, i)
+			if deleteIdx[i] || i == j {
 				continue
 			}
-			fi := (*b)[i]
-			for _, q := range fi {
-				div := q.Divide(fjC)
-				if div != nil {
-					pq := make(Polynomial, 1)
-					pq[0] = q
-					qRed := pq.Reduce((*b)[j : j+1])
-					fi = AddPoly(&fi, &pq)
-					fi = AddPoly(&fi, qRed)
+			fi := &(*b)[i]
+			isChanged := true
+			for isChanged {
+				isChanged = false
+				if len(*fi) == 0 {
+					deleteIdx[i] = true
+					break
+				}
+				for _, q := range *fi {
+					div := q.Divide(fjC)
+					if div != nil {
+						log.Println("Divide: ", q, fjC)
+						pq := make(Polynomial, 1)
+						pq[0] = q
+						qRed := pq.Reduce((*b)[j : j+1])
+						log.Println("qRed: ", qRed)
+						*fi = AddPoly(fi, &pq)
+						if len(*qRed) > 0 {
+							*fi = AddPoly(fi, qRed)
+						}
+						isChanged = true
+						break
+					}
 				}
 			}
 		}
@@ -476,6 +498,54 @@ func (b *Basis) Minimize() {
 	}
 	//log.Println(newB)
 	(*b) = newB[:]
+}
+
+func (b *Basis) MinimizeAndReduce() {
+	bOld := make(Basis, len(*b))
+	areEqual := func(b1, b2 *Basis) bool {
+		return (len(*b1) == 1 && len(*b2) == 0 && len((*b1)[0]) == 0 && len((*b2)[0]) == 0) || reflect.DeepEqual(*b1, *b2)
+	}
+	for i := 0; !areEqual(&bOld, b); i++ {
+		bOld = make(Basis, len(*b))
+		copy(bOld, *b)
+		log.Println("Iteration of MinimizeAndReduce:", i)
+		log.Println("Basis: ", *b)
+		log.Println("Old basis: ", bOld)
+		log.Println("Are equal: ", areEqual(&bOld, b))
+		b.minimizeAndReduce()
+		log.Println("New basis: ", *b)
+	}
+}
+
+func (b *Basis) IsMinimal() bool {
+	for i := 0; i < len(*b); i++ {
+		for j := i + 1; j < len(*b); j++ {
+			fiC := (*b)[i].GetTopMonomial()
+			fjC := (*b)[j].GetTopMonomial()
+			if fiC.Divide(fjC) != nil || fjC.Divide(fiC) != nil {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (b *Basis) IsReduced() bool {
+	for j := 0; j < len(*b); j++ {
+		fjC := (*b)[j].GetTopMonomial()
+		for i := 0; i < len(*b); i++ {
+			if i == j {
+				continue
+			}
+			fi := (*b)[i]
+			for _, mono := range fi {
+				if mono.Divide(fjC) != nil {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 func (s *System) Solve() [][]int {

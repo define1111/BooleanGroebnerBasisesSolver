@@ -89,7 +89,7 @@ func main() {
 	log.Println("Reduce 2: ", red2)*/
 	basis := f2.GetGroebnerBasis(system.Polynomials)
 	log.Println("Basis: ", basis)
-	basis.Minimize()
+	basis.MinimizeAndReduce()
 	log.Println("Minimized: ", basis)
 	solutions := system.Solve()
 	log.Println("Solutions: ", solutions)
@@ -106,4 +106,6 @@ func main() {
 	fmt.Println("New system:")
 	fmt.Printf("%v", newSystem)
 	fmt.Printf("Equal: %v\n", areEqual)
+	fmt.Printf("Is minimal: %v\n", basis.IsMinimal())
+	fmt.Printf("Is reduced: %v\n", basis.IsReduced())
 }
